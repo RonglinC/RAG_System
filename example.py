@@ -1,3 +1,9 @@
+# topk chunks
+# docs chunk
+# chunk turn vectorize 
+# query vectorize 
+# cosine similarity rank
+
 from typing import List, Dict
 import numpy as np
 import textwrap
@@ -102,6 +108,7 @@ def mock_llm_response(prompt:str)->str:
     return "I don't know. [no_source]"
 
 def answer_question(question:str,k:int=3)->str:
+    #
     retrieved_chunks=retrieve(question,top_k=k)
     print("Retrieved Chunks:")
     for r in retrieved_chunks:
@@ -116,5 +123,5 @@ def answer_question(question:str,k:int=3)->str:
     return response
 
 if __name__ == "__main__":
-    question="What is Acme's return policy for electronics?"
+    question="What is Shipping policy for electronics?"
     answer_question(question)
