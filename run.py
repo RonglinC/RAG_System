@@ -1,32 +1,32 @@
 from retriever import SimpleRetriever
 from pipeline import RAGPipeline
+from dotenv import load_dotenv
+from chunker import simple_chunk
 
 
-docs = {
-    "doc1.txt": (
-        "Acme Corp's return policy: you may return items within 30 days with receipt. "
-        "Electronic goods have a 15 day return window."
-    ),
-    "doc2.txt": (
-        "Shipping: Orders are processed within 2 business days. "
-        "Standard shipping takes 5-7 business days."
-    ),
-    "doc3.txt": (
-        "Warranty: Acme electronics have a 1 year limited warranty "
-        "covering manufacturing defects."
-    )
-}
 
 
 def main():
-    retriever = SimpleRetriever(max_words=40, overlap=10)
-    retriever.index(docs)
-
-    pipeline = RAGPipeline(retriever)
-
-    question = "What is the shipping policy?"
-    pipeline.answer_question(question, k=3)
-
+    load_dotenv()
+    docs={
+        "doc1": "RAG stands for Retrieval-Augmented Generation. It combines retrieval with generation.",
+        "doc2": "A retriever finds relevant context. An LLM then generates the final answer.",
+        "doc3": "Chunking splits long documents into smaller pieces for retrieval.",
+    }
+    chunks=[]
+    for doc_id, text in docs.items():
+        for i, chunk in enumerate(simple_chunk(text, max_words=20)):
+            chunks.append({
+                "doc_id": doc_id,
+                "chunk_id": f"{doc_id}_chunk{i}",
+                "text": chunk
+            })
+    retriever=SimpleRetriever(chunks)
+    pipeline=RAGPipeline(retriever)
+    question="What is RAG and how does it work?"
+    result=pipeline.answer_question(question)
+    print("\nFinal Result:")
+    print(result)
 
 if __name__ == "__main__":
     main()
