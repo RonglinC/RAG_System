@@ -1,25 +1,21 @@
-from typing import List, Dict
-import textwrap
-
-
-PROMPT_TEMPLATE = textwrap.dedent("""
-You are a helpful support assistant for a Corp.
-Answer the user's question using ONLY the context below.
-If the answer is not contained in the context, say "Sorry, I don't know".
-Cite the source(s) after your answer in square brackets [].
-
-Context:
-{context}
-
-User question:
-{question}
-
-Answer:
-""")
-
-
-def build_prompt(question: str, retrieved_chunks: List[Dict]) -> str:
-    context_text = "\n\n".join(
-        [f"{c['text']} [{c['doc_id']}]" for c in retrieved_chunks]
-    )
-    return PROMPT_TEMPLATE.format(context=context_text, question=question)
+def build_prompt(question,retrieved_chunks):
+    context_blocks=[]
+    for chunk in retrieved_chunks:
+        context_blocks.append(
+            f"{chunk['doc_id']} [source: {chunk['text']}]"
+        )
+    context="\n\n".join(context_blocks)
+    prompt=f"""
+    You are financial report assistant.
+    Use the following company financial report excerpts to answer the questions.
+    Rules:
+    - only answer using the provided context
+    - if the answer is not in the context, say "I don't know"
+    - cite the source(s) after your answer in square brackets []
+    Context:
+    {context}
+    Question:
+    {question}
+    Answer:
+    """
+    return prompt.strip()

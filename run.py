@@ -1,32 +1,29 @@
 from retriever import SimpleRetriever
 from pipeline import RAGPipeline
 from dotenv import load_dotenv
-from chunker import simple_chunk
-
+from html_loader import load_knowledge_base
+from llm_client import LLMClient
 
 
 
 def main():
     load_dotenv()
-    docs={
-        "doc1": "RAG stands for Retrieval-Augmented Generation. It combines retrieval with generation.",
-        "doc2": "A retriever finds relevant context. An LLM then generates the final answer.",
-        "doc3": "Chunking splits long documents into smaller pieces for retrieval.",
-    }
-    chunks=[]
-    for doc_id, text in docs.items():
-        for i, chunk in enumerate(simple_chunk(text, max_words=20)):
-            chunks.append({
-                "doc_id": doc_id,
-                "chunk_id": f"{doc_id}_chunk{i}",
-                "text": chunk
-            })
-    retriever=SimpleRetriever(chunks)
-    pipeline=RAGPipeline(retriever)
-    question="What is RAG and how does it work?"
-    result=pipeline.answer_question(question)
-    print("\nFinal Result:")
-    print(result)
+    print("Loading financial reports...")
+    docs = load_knowledge_base("./knowledge_base")
+    
+    retriever = SimpleRetriever(max_words=150, overlap=30)
+    retriever.index(docs)
+    llm_client=LLMClient()
+    pipeline=RAGPipeline(retriever, llm_client)
+    print("Your Finance QA Bot read!")
+    while True:
+        question=input("\nAsk a question about the financial reports (or 'exit' to quit): ")
+        if question.lower() in ["exit", "quit"]:
+            print("Goodbye!")
+            break
 
+        result=pipeline.answer_question(question)
+        print("\nBot:", result["response"])
+        print()
 if __name__ == "__main__":
     main()

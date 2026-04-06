@@ -115,7 +115,7 @@ def answer_question(question:str,k:int=3)->str:
         print(f"- {r['chunk_id']} (score: {r['score']:.4f}): {r['text']} [{r['doc_id']}]")
         print(f"{r['text']} [{r['doc_id']}]")
     prompt=build_prompt(question,retrieved_chunks)
-    print("\nConstructed Prompt:")
+    print(\nConstructed Prompt:")
     print(prompt)
     response=mock_llm_response(prompt)
     print("\nLLM Response:")
