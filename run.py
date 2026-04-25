@@ -1,20 +1,17 @@
-from retriever import SimpleRetriever
-from pipeline import RAGPipeline
-from dotenv import load_dotenv
+from rag.retriever import SimpleRetriever
+from rag.pipeline import RAGPipeline
 from html_loader import load_knowledge_base
-from llm_client import LLMClient
+from rag.llm_client import LLMClient
 
 
 
 def main():
-    load_dotenv()
     print("Loading financial reports...")
     docs = load_knowledge_base("./knowledge_base")
     
     retriever = SimpleRetriever(max_words=150, overlap=30)
     retriever.index(docs)
-    llm_client=LLMClient()
-    pipeline=RAGPipeline(retriever, llm_client)
+    pipeline=RAGPipeline(retriever=retriever, llm_client=LLMClient())
     print("Your Finance QA Bot read!")
     while True:
         question=input("\nAsk a question about the financial reports (or 'exit' to quit): ")

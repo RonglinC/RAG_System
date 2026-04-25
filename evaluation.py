@@ -1,4 +1,4 @@
-from retriever import SimpleRetriever
+from rag.retriever import SimpleRetriever
 
 
 docs = {

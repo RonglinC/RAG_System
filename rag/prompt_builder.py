@@ -1,3 +1,6 @@
+from __future__ import annotations
+from typing import List, Dict
+
 def build_prompt(question,retrieved_chunks):
     context_blocks=[]
     for chunk in retrieved_chunks:
