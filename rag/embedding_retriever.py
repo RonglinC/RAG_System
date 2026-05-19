@@ -1,10 +1,12 @@
 from __future__ import annotations
-from typing import List, Dict, Union
+from typing import List, Dict, Union, TYPE_CHECKING
 import numpy as np
-from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 
 from rag.chunker import simple_chunk
+
+if TYPE_CHECKING:
+    from sentence_transformers import SentenceTransformer
 
 
 class EmbeddingRetriever:
@@ -21,7 +23,13 @@ class EmbeddingRetriever:
     - 'paraphrase-multilingual-MiniLM-L12-v2': Multilingual
     """
     
-    def __init__(self, model_name: str = "all-MiniLM-L6-v2", max_words: int = 40, overlap: int = 10):
+    def __init__(
+        self,
+        model_name: str = "all-MiniLM-L6-v2",
+        max_words: int = 40,
+        overlap: int = 10,
+        verbose: bool = True,
+    ):
         """
         Initialize embedding retriever.
         
@@ -33,12 +41,24 @@ class EmbeddingRetriever:
         self.model_name = model_name
         self.max_words = max_words
         self.overlap = overlap
+        self.verbose = verbose
         self.corpus_chunks = []
         self.embeddings = None
-        
-        print(f"Loading embedding model: {model_name}...")
-        self.model = SentenceTransformer(model_name)
-        print(f"✓ Model loaded. Embedding dimension: {self.model.get_sentence_embedding_dimension()}")
+
+        self._model: SentenceTransformer | None = None
+
+    @property
+    def model(self) -> "SentenceTransformer":
+        if self._model is None:
+            from sentence_transformers import SentenceTransformer
+
+            if self.verbose:
+                print(f"Loading embedding model: {self.model_name}...")
+            self._model = SentenceTransformer(self.model_name)
+            if self.verbose:
+                dim = self._model.get_sentence_embedding_dimension()
+                print(f"✓ Model loaded. Embedding dimension: {dim}")
+        return self._model
 
     def index(self, docs: Union[Dict[str, str], List[Dict]]) -> None:
         """Index documents or chunks."""
@@ -66,10 +86,16 @@ class EmbeddingRetriever:
                 })
 
         # Encode all chunks
-        print(f"Encoding {len(self.corpus_chunks)} chunks...")
+        if self.verbose:
+            print(f"Encoding {len(self.corpus_chunks)} chunks...")
         texts = [c["text"] for c in self.corpus_chunks]
-        self.embeddings = self.model.encode(texts, show_progress_bar=True, convert_to_numpy=True)
-        print(f"✓ Indexed {len(self.corpus_chunks)} chunks")
+        self.embeddings = self.model.encode(
+            texts,
+            show_progress_bar=self.verbose,
+            convert_to_numpy=True,
+        )
+        if self.verbose:
+            print(f"✓ Indexed {len(self.corpus_chunks)} chunks")
 
     def retrieve(self, query: str, top_k: int = 3) -> List[Dict]:
         """

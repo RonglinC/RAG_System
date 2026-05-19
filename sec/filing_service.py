@@ -1,17 +1,34 @@
 from __future__ import annotations
 
-from typing import List, Dict
+from typing import List, Dict, Optional
 from sec.sec_client import SECClient
 from sec.filing_parser import FilingParser
+from sec.filing_cache import FilingCache
 from rag.chunker import SlidingWindowChunker
 
 
 class FilingService:
-    def __init__(self, sec_client: SECClient, max_words: int = 220, overlap: int = 40) -> None:
+    def __init__(
+        self,
+        sec_client: SECClient,
+        max_words: int = 220,
+        overlap: int = 40,
+        cache: Optional[FilingCache] = None,
+    ) -> None:
         self.sec_client = sec_client
         self.chunker = SlidingWindowChunker(max_words=max_words, overlap=overlap)
+        self.cache = cache or FilingCache(enabled=False)
 
     def build_chunks_for_latest_filing(self, ticker: str, form_type: str = "10-K") -> Dict:
+        ticker = ticker.upper()
+        cache_key = f"{ticker}:{form_type}:latest"
+
+        def _build() -> Dict:
+            return self._build_chunks_uncached(ticker, form_type)
+
+        return self.cache.get_bundle(cache_key, _build)
+
+    def _build_chunks_uncached(self, ticker: str, form_type: str) -> Dict:
         company_info = self.sec_client.ticker_to_cik(ticker)
         submissions = self.sec_client.get_submissions(company_info["cik"])
         filing = self.sec_client.find_latest_filing(submissions, form_type=form_type)
@@ -19,21 +36,24 @@ class FilingService:
         if not filing:
             raise ValueError(f"No recent {form_type} filing found for {ticker}")
 
-        # Use company name from ticker lookup if available
         if company_info.get("company_name"):
             filing["company_name"] = company_info["company_name"]
+        filing["ticker"] = ticker
 
-        html = self.sec_client.download_filing_html(filing["filing_html_url"])
+        html_key = f"{ticker}:{form_type}:{filing['accession_no']}:html"
+        html = self.cache.get_html(
+            html_key,
+            lambda: self.sec_client.download_filing_html(filing["filing_html_url"]),
+        )
         text = FilingParser.html_to_text(html)
         sections = FilingParser.split_sections(text)
 
         all_chunks: List[Dict] = []
         for section in sections:
             metadata = {
-                "ticker": ticker.upper(),
+                "ticker": ticker,
                 "company_name": filing["company_name"],
                 "cik": company_info["cik"],
-                "cik": filing["cik"],
                 "form_type": filing["form_type"],
                 "filing_date": filing["filing_date"],
                 "accession_no": filing["accession_no"],
@@ -43,16 +63,11 @@ class FilingService:
 
             chunks = self.chunker.chunk_text(section["text"], metadata=metadata)
             for c in chunks:
-                all_chunks.append(
-                    {
-                        "text": c.text,
-                        "metadata": c.metadata,
-                    }
-                )
+                all_chunks.append({"text": c.text, "metadata": c.metadata})
 
         return {
             "company_name": filing["company_name"],
-            "ticker": ticker.upper(),
+            "ticker": ticker,
             "form_type": filing["form_type"],
             "filing_date": filing["filing_date"],
             "filing_html_url": filing["filing_html_url"],

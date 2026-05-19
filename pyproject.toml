@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rag-system"
+version = "2.1.0"
+description = "SEC filing RAG analyzer"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "openai>=1.30.0",
+    "python-dotenv>=1.0.1",
+    "scikit-learn>=1.4.0",
+    "numpy",
+    "requests",
+    "beautifulsoup4",
+    "lxml",
+    "sentence-transformers>=2.2.0",
+    "streamlit>=1.30.0",
+    "fastapi>=0.110.0",
+    "uvicorn[standard]>=0.27.0",
+    "pydantic>=2.0.0",
+]
+
+[project.scripts]
+sec-analyzer = "app.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["app*", "rag*", "sec*", "api*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

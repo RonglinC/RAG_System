@@ -1,0 +1,33 @@
+# Secrets and local config
+.env
+.env.local
+*.pem
+
+# Python
+**/__pycache__/
+**/*.pyc
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+dist/
+build/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+
+# Caches and runtime data
+.cache/
+*.log
+
+# IDE
+.idea/
+.vscode/
+.DS_Store
+
+# Model / embedding caches (downloaded at runtime)
+models/

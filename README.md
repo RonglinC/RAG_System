@@ -23,7 +23,7 @@ A production-ready **Retrieval-Augmented Generation (RAG)** system for analyzing
 cd RAG_System
 
 # Install required packages
-pip install -r requirement.txt
+pip install -r requirements.txt
 ```
 
 ### 2. Configure Environment
@@ -49,8 +49,9 @@ OPENAI_MODEL="gpt-3.5-turbo"              # or gpt-4
 
 #### Option A: Interactive Web UI (Recommended for beginners)
 ```bash
-streamlit run app/streamlit_ui.py
+streamlit run streamlit_app.py
 # Opens at http://localhost:8501
+# (Or: streamlit run app/streamlit_ui.py — both work from project root)
 ```
 
 #### Option B: Command Line
@@ -263,28 +264,35 @@ client = LLMClient(
 
 ```
 RAG_System/
+├── api/
+│   └── main.py                  # FastAPI REST service
 ├── app/
-│   ├── cli.py                    # Command-line interface
-│   ├── analyzer.py               # Analysis orchestration
-│   └── streamlit_ui.py          # Web interface (new)
+│   ├── cli.py                   # Command-line interface
+│   ├── analyzer.py              # High-level orchestrator
+│   └── streamlit_ui.py          # Web interface
 ├── rag/
-│   ├── chunker.py               # Text chunking with metadata
-│   ├── retriever.py             # TF-IDF retriever
-│   ├── embedding_retriever.py   # SBERT retriever (new)
-│   ├── llm_client.py            # LLM integration with fallback
-│   ├── pipeline.py              # RAG pipeline orchestration
-│   ├── prompt_builder.py        # Prompt construction
-│   └── financial_metrics.py     # Financial metrics extraction (new)
+│   ├── chunker.py
+│   ├── retriever.py             # TF-IDF
+│   ├── embedding_retriever.py   # SBERT
+│   ├── hybrid_retriever.py      # Combined retrieval
+│   ├── retriever_factory.py
+│   ├── citations.py             # Export helpers
+│   ├── llm_client.py
+│   ├── pipeline.py
+│   ├── prompt_builder.py
+│   └── financial_metrics.py
 ├── sec/
-│   ├── sec_client.py            # SEC API client (enhanced)
-│   ├── filing_service.py        # Filing processing pipeline
-│   ├── filing_parser.py         # HTML parsing & section detection
-│   ├── filing_loader.py         # Legacy filing loader
-│   └── ticker_to_click.py       # Ticker lookup utility
-├── problem_requirements.txt       # Dependencies
-├── .env.example                 # Environment template
-├── ARCHITECTURE.md              # Detailed architecture guide (new)
-└── README.md                    # This file
+│   ├── sec_client.py
+│   ├── filing_service.py
+│   ├── filing_cache.py          # Disk cache
+│   └── filing_parser.py
+├── tests/                       # pytest suite
+├── requirements.txt
+├── Dockerfile
+├── docker-compose.yml
+├── evaluation_sec.py            # Offline retrieval eval
+├── .env.example
+└── README.md
 ```
 
 ---
@@ -310,7 +318,7 @@ Other companies pulled automatically from SEC database.
 **Solution:** Run from project root and install dependencies
 ```bash
 cd /path/to/RAG_System
-pip install -r requirement.txt
+pip install -r requirements.txt
 python -m app.cli --ticker AAPL
 ```
 
@@ -395,13 +403,33 @@ client = LLMClient(
 
 ---
 
+## API & Docker
+
+```bash
+# REST API
+uvicorn api.main:app --reload --port 8000
+# Docs: http://localhost:8000/docs
+
+# Docker (API + Streamlit)
+docker compose up --build
+```
+
+## Retriever options
+
+| CLI flag | Description |
+|----------|-------------|
+| `--retriever tfidf` | Fast keyword search (default) |
+| `--retriever embedding` | Semantic SBERT search |
+| `--retriever hybrid` | Weighted TF-IDF + embeddings (recommended) |
+
+Filing HTML and parsed bundles are cached under `.cache/filings/` (disable with `--no-cache`).
+
 ## Next Steps
 
-1. 🎯 **Use the Streamlit UI** for interactive exploration
-2. 📚 **Read ARCHITECTURE.md** for deep technical details
-3. 🧪 **Experiment with different retrievers** (TF-IDF vs Embeddings)
-4. 🚀 **Deploy as API** using FastAPI (see ARCHITECTURE.md)
-5. 📊 **Add visualizations** for financial metrics
+1. Use the **Streamlit UI** for interactive exploration
+2. Read **ARCHITECTURE.md** for deep technical details
+3. Run **evaluation_sec.py** on local `knowledge_base/` HTML files
+4. Use **FastAPI** (`api/main.py`) or **Docker Compose** for deployment
 
 ---
 
@@ -418,7 +446,7 @@ Suggestions for improvement:
 
 ## License
 
-[Add your license]
+MIT — see [LICENSE](LICENSE)
 
 ## Support
 

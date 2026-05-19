@@ -1,12 +1,11 @@
 from __future__ import annotations
-from typing import List, Dict
-from rag.prompt_builder import build_prompt
+from typing import Any, List, Dict
+from rag.prompt_builder import build_prompt, _chunk_label
 from rag.llm_client import LLMClient
-from rag.retriever import SimpleRetriever
 
 
 class RAGPipeline:
-    def __init__(self, retriever: SimpleRetriever, llm_client: LLMClient):
+    def __init__(self, retriever: Any, llm_client: LLMClient | None = None):
         self.retriever = retriever
         self.llm_client = llm_client or LLMClient()
 
@@ -60,9 +59,14 @@ class RAGPipeline:
         
         return self._format_task_result(task, company, form_type, retrieved_chunks, response)
 
+    def _chunk_context(self, chunks: List[Dict]) -> str:
+        return "\n\n".join(
+            f"[{_chunk_label(c, i)}]\n{c['text']}" for i, c in enumerate(chunks, 1)
+        )
+
     def _build_business_summary_prompt(self, company: str, form_type: str, chunks: List[Dict]) -> str:
         """Build prompt for business summary task."""
-        context = "\n\n".join([f"[{c['doc_id']}]: {c['text']}" for c in chunks])
+        context = self._chunk_context(chunks)
         return f"""Based on the following excerpts from {company}'s {form_type} filing, provide a comprehensive summary of:
 1. Business Overview: Main products and services
 2. Strategy: Key strategic initiatives 
@@ -76,7 +80,7 @@ Provide a concise, well-structured analysis."""
 
     def _build_risk_summary_prompt(self, company: str, form_type: str, chunks: List[Dict]) -> str:
         """Build prompt for risk summary task."""
-        context = "\n\n".join([f"[{c['doc_id']}]: {c['text']}" for c in chunks])
+        context = self._chunk_context(chunks)
         return f"""Based on the following excerpts from {company}'s {form_type} filing, identify and summarize the main risks:
 1. Operational Risks
 2. Market and Competition Risks
@@ -91,7 +95,7 @@ Organize risks by severity and likelihood. Be specific with examples from the fi
 
     def _build_mdna_summary_prompt(self, company: str, form_type: str, chunks: List[Dict]) -> str:
         """Build prompt for MD&A summary task."""
-        context = "\n\n".join([f"[{c['doc_id']}]: {c['text']}" for c in chunks])
+        context = self._chunk_context(chunks)
         return f"""Based on the MD&A section from {company}'s {form_type} filing, summarize:
 1. Financial Results: Revenue and profitability trends
 2. Operational Metrics: Key performance indicators
@@ -105,7 +109,7 @@ Focus on year-over-year comparisons and management's forward-looking statements.
 
     def _build_financial_red_flags_prompt(self, company: str, form_type: str, chunks: List[Dict]) -> str:
         """Build prompt for financial red flags task."""
-        context = "\n\n".join([f"[{c['doc_id']}]: {c['text']}" for c in chunks])
+        context = self._chunk_context(chunks)
         return f"""Based on {company}'s {form_type} filing, identify financial red flags and concerns:
 1. Material Weaknesses in Internal Controls
 2. Going Concern Issues

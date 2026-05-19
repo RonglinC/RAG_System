@@ -2,21 +2,17 @@ from __future__ import annotations
 
 import argparse
 import os
+
+import sys
+from pathlib import Path
+
+_ROOT = Path(__file__).resolve().parents[1]
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
+
 from dotenv import load_dotenv
 
-from sec.sec_client import SECClient
-from sec.filing_service import FilingService
-from rag.retriever import SimpleRetriever
-from rag.llm_client import LLMClient
-from rag.pipeline import RAGPipeline
-
-
-TASK_QUERY_MAP = {
-    "business_summary": "business overview products services strategy competition",
-    "risk_summary": "risk factors cybersecurity supply chain regulation competition macroeconomic",
-    "mdna_summary": "management discussion results of operations liquidity capital resources outlook",
-    "financial_red_flags": "material weakness going concern liquidity debt impairment loss legal proceedings risk",
-}
+from app.analyzer import SECFilingAnalyzer, TASK_QUERY_MAP
 
 
 def parse_args():
@@ -36,6 +32,23 @@ def parse_args():
         help="Predefined analysis task",
     )
     parser.add_argument("--question", default=None, help="Question for ask mode")
+    parser.add_argument(
+        "--retriever",
+        default="tfidf",
+        choices=["tfidf", "embedding", "hybrid"],
+        help="Retrieval strategy",
+    )
+    parser.add_argument(
+        "--no-cache",
+        action="store_true",
+        help="Disable filing disk cache",
+    )
+    parser.add_argument(
+        "--export",
+        choices=["markdown", "json"],
+        default=None,
+        help="Write citations export to stdout file path suffix (use with ask mode)",
+    )
     return parser.parse_args()
 
 
@@ -43,45 +56,35 @@ def main():
     load_dotenv()
     args = parse_args()
 
-    sec_user_agent = os.getenv("SEC_USER_AGENT")
-    if not sec_user_agent:
-        raise ValueError("Please set SEC_USER_AGENT in .env")
-
-    sec_client = SECClient(user_agent=sec_user_agent)
-    filing_service = FilingService(sec_client=sec_client)
-
-    filing_bundle = filing_service.build_chunks_for_latest_filing(
-        ticker=args.ticker,
-        form_type=args.form,
+    analyzer = SECFilingAnalyzer(
+        retriever_type=args.retriever,
+        use_cache=not args.no_cache,
     )
-
-    retriever = SimpleRetriever()
-    retriever.index(filing_bundle["chunks"])
-
-    llm_client = LLMClient()
-    pipeline = RAGPipeline(retriever=retriever, llm_client=llm_client)
+    filing_bundle = analyzer.load_filing(args.ticker, args.form)
 
     if args.mode == "ask":
         if not args.question:
             raise ValueError("--question is required when --mode ask")
-        result = pipeline.answer_question(args.question, top_k=6)
+        result = analyzer.ask(args.question, top_k=6)
+        output = result["response"]
+        if args.export:
+            export = analyzer.export_last_answer(result, fmt=args.export)
+            ext = "md" if args.export == "markdown" else "json"
+            out_path = f"{args.ticker}_{args.form}_answer.{ext}"
+            with open(out_path, "w", encoding="utf-8") as f:
+                f.write(export)
+            print(f"\nExported citations to {out_path}")
     else:
-        retrieval_query = TASK_QUERY_MAP[args.task]
-        result = pipeline.run_task(
-            task=args.task,
-            company=filing_bundle["company_name"],
-            form_type=filing_bundle["form_type"],
-            retrieval_query=retrieval_query,
-            top_k=8,
-        )
+        output = analyzer.run_task(args.task, top_k=8)
 
     print("\n" + "=" * 80)
     print(f"Company: {filing_bundle['company_name']} ({filing_bundle['ticker']})")
     print(f"Form: {filing_bundle['form_type']}")
     print(f"Filing Date: {filing_bundle['filing_date']}")
     print(f"Source: {filing_bundle['filing_html_url']}")
+    print(f"Retriever: {args.retriever} | Cache: {not args.no_cache}")
     print("=" * 80)
-    print(result)
+    print(output)
     print("=" * 80 + "\n")
 
 

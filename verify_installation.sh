@@ -65,6 +65,11 @@ check_file "sec/filing_service.py" "Filing Service"
 check_file "sec/filing_parser.py" "Filing Parser"
 check_file "rag/retriever.py" "TF-IDF Retriever"
 check_file "rag/embedding_retriever.py" "Embedding Retriever"
+check_file "rag/hybrid_retriever.py" "Hybrid Retriever"
+check_file "rag/retriever_factory.py" "Retriever Factory"
+check_file "sec/filing_cache.py" "Filing Cache"
+check_file "api/main.py" "FastAPI Service"
+check_file "app/analyzer.py" "Analyzer Orchestrator"
 check_file "rag/chunker.py" "Chunker"
 check_file "rag/llm_client.py" "LLM Client"
 check_file "rag/pipeline.py" "RAG Pipeline"
@@ -80,7 +85,7 @@ echo ""
 
 echo "Part 3: Configuration Files"
 echo "──────────────────────────────────────────────────────────────────"
-check_file "requirement.txt" "Python Dependencies"
+check_file "requirements.txt" "Python Dependencies"
 check_file ".env.example" "Environment Template"
 if [ -f ".env" ]; then
     echo -e "${GREEN}✓${NC} $((++check_count)). Environment Configuration: .env"
@@ -129,7 +134,7 @@ for pkg, name in packages:
         __import__(pkg)
         print(f"\033[0;32m✓\033[0m Package {name} installed")
     except ImportError:
-        print(f"\033[0;31m✗\033[0m Package {name} NOT installed - run: pip install -r requirement.txt")
+        print(f"\033[0;31m✗\033[0m Package {name} NOT installed - run: pip install -r requirements.txt")
 EOF
 echo ""
 
